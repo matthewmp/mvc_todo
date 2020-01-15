@@ -15,25 +15,34 @@ class Model {
         }
 
         this.todos.push(todo);
+        this.onTodoListChanged(this.todos);
     }
 
     // Loop through todos and find by id, replace text
     editTodo(id, updatedText) {
         this.todos = this.todos.map(todo => 
             todo.id === id ? { id: todo.id, text: updatedText, complete: todo.complete } : todo
-        )
+        );
+
+        this.onTodoListChanged(this.todos);
     }
 
     // Filter out all todos that don't match id
     deleteTodo(id) {
         this.todos = this.todos.filter(todo => todo.id !== id);
+        this.onTodoListChanged(this.todos);
     }
 
     // Toggle the complete status of a todo
     toggleTodo(id) {
         this.todos = this.todos.map(todo => 
                 todo.id === id ? { id: todo.id, text: todo.text, complete: !todo.complete } : todo
-        )
+        );
+        this.onTodoListChanged(this.todos);
+    }
+
+    bindTodoListChanged(callback) {
+        this.onTodoListChanged = callback;
     }
 }
 
@@ -73,12 +82,12 @@ class View {
 
     // Getter for input value
     get _todoText() {
-        return this.input.val;
+        return this.input.value;
     }
 
     // Reset input value
     _resetInput() {
-        this.input.val = '';
+        this.input.value = '';
     }
 
     // Display todos to list
@@ -87,12 +96,13 @@ class View {
         while(this.todoList.firstChild) {
             this.todoList.removeChild(this.todoList.firstChild);
         }
-        console.log('this: ', this)
+        
         // Show default message if no todos are left
-        if(this.todoList.length === 0) {
+        if(todos.length === 0) {
             const p = this.createElement('p');
             p.textContent = 'Nothing to do! Add a task.';
-            this.todoList.append(p);
+            p.id = 'Test'
+            this.todoList.appendChild(p);
         } else {
             // Create new todo node for each item in state
             todos.forEach(todo => {
@@ -138,8 +148,30 @@ class View {
                 handler(this._todoText);
                 this._resetInput();
             }
+        });
+    }
+
+    bindDeleteTodo(handler) {
+        this.todoList.addEventListener('click', event => {
+            if(event.target.className === 'delete') {
+                const id = parseInt(event.target.parentElement.id);
+                
+                handler(id);
+            }
         })
     }
+
+    bindToggleTodo(handler) {
+        this.todoList.addEventListener('change', event => {
+            if(event.target.type === 'checkbox') {
+                const id = parseInt(event.target.parentElement.id);
+
+                handler(id);
+            }
+        })
+    }
+
+
 }
 
 class Controller {
@@ -149,6 +181,13 @@ class Controller {
 
       // Display initial todos
       this.onTodoListChanged(this.model.todos);
+
+      // Bind view's event listeners to controllers methods
+      this.view.bindAddTodo(this.handleAddTodo);
+      this.view.bindDeleteTodo(this.handleDeleteTodo);
+      this.view.bindToggleTodo(this.handleToggleTodo);
+
+      this.model.bindTodoListChanged(this.onTodoListChanged)
     }
 
     onTodoListChanged = todos => this.view.renderTodos(todos);
