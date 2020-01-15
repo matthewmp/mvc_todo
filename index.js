@@ -38,10 +38,129 @@ class Model {
 }
 
 
+class View {
+    constructor() {
+        // Get app's root element
+        this.app = this.getElement('#root');
+
+        // Get Input for entering new todos
+        this.input = this.getElement('#inp-todo-text');
+
+        // Get submit button for entering todos
+        this.submitButton = this.getElement('#btn-todo-submit');
+    
+        // The visual representation of the todo list
+        this.todoList = this.getElement('.todo-list');
+
+        // The form itself
+        this.form = this.getElement('#form-todo');
+    }
+
+    // Create element with optional CSS class
+    createElement(tag, className) {
+        const el = document.createElement(tag);
+        if(className) el.classList.add(className);
+
+        return el;
+    }
+
+    // Retrieve element
+    getElement(selector) {
+        const el = document.querySelector(selector);
+
+        return el;
+    }
+
+    // Getter for input value
+    get _todoText() {
+        return this.input.val;
+    }
+
+    // Reset input value
+    _resetInput() {
+        this.input.val = '';
+    }
+
+    // Display todos to list
+    renderTodos(todos) {
+        // Delete all nodes in list
+        while(this.todoList.firstChild) {
+            this.todoList.removeChild(this.todoList.firstChild);
+        }
+        console.log('this: ', this)
+        // Show default message if no todos are left
+        if(this.todoList.length === 0) {
+            const p = this.createElement('p');
+            p.textContent = 'Nothing to do! Add a task.';
+            this.todoList.append(p);
+        } else {
+            // Create new todo node for each item in state
+            todos.forEach(todo => {
+            const li = this.createElement('li');
+            li.id = todo.id;
+
+            // Create checkbox to mark todo as complete / incomplete
+            const checkbox = this.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = todo.complete;
+
+            // Todo content inside editable span
+            const span = this.createElement('span');
+            span.contentEditable = true;
+            span.classList.add('editable');
+
+            // If completed allow striketrough text
+            if(todo.complete) {
+                const strike = this.createElement('s');
+                strike.textContent = todo.text;
+                span.append(strike);
+            } else {
+                span.textContent = todo.text;
+            }
+
+            // Add delete button for each todo
+            const deleteButton = this.createElement('button', 'delete');
+            deleteButton.textContent = 'Delete';
+            li.append(checkbox, span, deleteButton);
+
+            // Append node to list
+            this.todoList.append(li);
+            });                
+        }
+    }
+
+    // Bind event handlers to controller
+    bindAddTodo(handler) {
+        this.form.addEventListener('submit', event => {
+            event.preventDefault();
+
+            if(this._todoText) {
+                handler(this._todoText);
+                this._resetInput();
+            }
+        })
+    }
+}
+
+class Controller {
+    constructor(model, view) {
+      this.model = model;
+      this.view = view;
+
+      // Display initial todos
+      this.onTodoListChanged(this.model.todos);
+    }
+
+    onTodoListChanged = todos => this.view.renderTodos(todos);
+
+    handleAddTodo = todoText => this.model.addTodo(todoText);
+
+    handleEditTodo = (id, todoText) => this.model.editTodo(id, todoText);
+
+    handleDeleteTodo = id => this.model.deleteTodo(id);
+
+    handleToggleTodo = id => this.model.toggleTodo(id);
+  }
 
 
-// Run todo
-var md = new Model();
-md.addTodo('Food Shopping');
-md.editTodo(3, 'Nap')
-md.toggleTodo(1)
+const app = new Controller(new Model(), new View());
